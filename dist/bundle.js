@@ -23434,8 +23434,8 @@ window.onload = function () {
     // var modelFile = 'https://cdn.rawgit.com/mrdoob/three.js/dev/examples/models/mmd/miku/miku_v2.pmd';
     // var vmdFiles = ['https://cdn.rawgit.com/mrdoob/three.js/dev/examples/models/mmd/vmds/wavefile_v2.vmd'];
 
-    var modelFile = 'https://nakechai.github.io/arMobileMaster/res/miku_v2.pmd';
-    var vmdFiles = [ 'https://nakechai.github.io/arMobileMaster/res/wavefile_v2.vmd' ];
+    var modelFile = 'https://nakechai.github.io/res/miku_v2.pmd';
+    var vmdFiles = [ 'https://nakechai.github.io/res/wavefile_v2.vmd' ];
 
     var helper = new THREE.MMDHelper();
     var loader = new THREE.MMDLoader();
