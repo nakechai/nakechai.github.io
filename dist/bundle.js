@@ -23203,13 +23203,13 @@ window.onload = function () {
                 context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
                 var imageData = context.getImageData(0, 0, canvasElement.width, canvasElement.height);
                 /**add log imageData*********************************************************************************************/
-                console.log(imageData);
+                // console.log(imageData);
                 // detect markers
                 var detector = new AR.Detector();
                 /**add log candidates********************************************************************************************************/
-                var markers = detector.detect(imageData);
+                // var markers = detector.detect(imageData);
                 /***add log markers**************************************************************************************/
-                console.log(markers);
+                // console.log(markers);
                 // return the result
                 return markers;
             }
