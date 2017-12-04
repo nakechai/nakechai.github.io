@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<!-- three.js library -->
+<script src='lib/three.js'></script>
+<script src="lib/stats.min.js"></script>
+<!-- ar.js -->
+<script src="lib/ar.js"></script>
+<script>
+	THREEx.ArToolkitContext.baseURL = '../'
+</script>
+<!--MMDLoader.js-->
+<script src="lib/MMDLoader-es5.js"></script>
+
+<style>
+	/*body {*/
+		/*overflow: hidden;*/
+	/*}*/
+</style>
+<body style='margin : 0px;  font-family: Monospace;'>
+<!--<div style='position: absolute; top: 10px; width:100%; text-align: center; z-index: 1;'>-->
+	<!--<a href="https://github.com/jeromeetienne/AR.js/" target="_blank">AR.js</a> - three.js mobile performance-->
+	<!--<br/>-->
+	<!--Contact me any time at <a href='https://twitter.com/jerome_etienne' target='_blank'>@jerome_etienne</a>-->
+<!--</div>-->
+<script>
+    var log = function(){
+        console.log.apply(console, arguments)
+    }
+	//////////////////////////////////////////////////////////////////////////////////
+	//		Init
+	//////////////////////////////////////////////////////////////////////////////////
+
+	// init renderer
+	/**在初始化 WebGLRenderer渲染器时，若参数对象没有 canvas 属性，则创建一个 canvas 元素。
+	 * renderer.domElement 指的就是 canvas （源码中有）
+	 * */
+	var renderer	= new THREE.WebGLRenderer({
+		// antialias	: true,
+		alpha: true
+	});
+	renderer.setClearColor(new THREE.Color('lightgrey'), 0);
+	// renderer.setPixelRatio( 1/2 );
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.domElement.style.position = 'absolute';
+	renderer.domElement.style.top = '0px';
+	renderer.domElement.style.left = '0px';
+	document.body.appendChild( renderer.domElement );
+
+	// array of functions for the rendering loop
+	var onRenderFcts= [];
+
+	// init scene and camera
+	var scene	= new THREE.Scene();
+	
+	//////////////////////////////////////////////////////////////////////////////////
+	//		Initialize a basic camera
+	//////////////////////////////////////////////////////////////////////////////////
+
+	// Create a camera
+	var camera = new THREE.Camera();
+	scene.add(camera);
+
+	////////////////////////////////////////////////////////////////////////////////
+	//          handle arToolkitSource
+	////////////////////////////////////////////////////////////////////////////////
+	/**处理传入的识别卡资源*/
+	var arToolkitSource = new THREEx.ArToolkitSource({
+		// to read from the webcam 
+		sourceType : 'webcam',
+
+		// to read from an image
+//		 sourceType : 'image',
+//		 sourceUrl : THREEx.ArToolkitContext.baseURL + '../data/images/img.jpg',
+
+		// to read from a video
+//		 sourceType : 'video',
+//		 sourceUrl : THREEx.ArToolkitContext.baseURL + '../data/videos/headtracking.mp4',
+	})
+
+	arToolkitSource.init(function onReady(){
+		onResize()
+	})
+	
+	// handle resize
+	window.addEventListener('resize', function(){
+		onResize()
+	})
+	function onResize(){
+		arToolkitSource.onResize();
+		arToolkitSource.copySizeTo(renderer.domElement);	/**这段代码的 domElement 是谁？*************************************************************/
+		if( arToolkitContext.arController !== null ){
+			arToolkitSource.copySizeTo(arToolkitContext.arController.canvas)	
+		}	
+	}
+	////////////////////////////////////////////////////////////////////////////////
+	//          initialize arToolkitContext
+	////////////////////////////////////////////////////////////////////////////////
+	
+
+	// create atToolkitContext
+	var arToolkitContext = new THREEx.ArToolkitContext({
+		/**这个参数必须设置，否则会报跨域错误，因为默认参数为 github.com**/
+		cameraParametersUrl: THREEx.ArToolkitContext.baseURL + 'data/camera_para.dat',
+		detectionMode: 'mono',
+		maxDetectionRate: 30,
+		canvasWidth: 80*3,
+		canvasHeight: 60*3,
+	});
+	// initialize it
+	arToolkitContext.init(function onCompleted(){
+	    /**复制投射矩阵到相机***/
+		// copy projection matrix to camera
+		camera.projectionMatrix.copy( arToolkitContext.getProjectionMatrix() );
+	});
+
+	// update artoolkit on every frame
+	onRenderFcts.push(function(){
+		if( arToolkitSource.ready === false )	return;
+
+		arToolkitContext.update( arToolkitSource.domElement )
+	})
+	
+	
+	////////////////////////////////////////////////////////////////////////////////
+	//          Create a ArMarkerControls
+	////////////////////////////////////////////////////////////////////////////////
+	/**以下为引入跳舞的模型********/
+    /**返回 THREE 的多材质对象*/
+    function makePhongMaterials ( materials ) {
+        var array = [];
+        for (var i = 0; i < materials.length; i++){
+            var m = new THREE.MeshPhongMaterial();
+            m.copy(material);
+            m.needsUpdate = true;
+            array.push( m );
+        }
+        return new THREE.MultiMaterial( array );
+    }
+
+    /**引入跳舞的模型********/
+//    var modelFile = 'https://192.168.1.154:8001/data/miku_v2.pmd';
+//    var vmdFiles = [ 'https://192.168.1.154:8001/data/wavefile_v2.vmd' ];
+    var modelFile = 'https://nakechai.github.io/ar-model/data/miku_v2.pmd';
+    var vmdFiles = [ 'https://nakechai.github.io/ar-model/data/wavefile_v2.vmd' ];
+    var helper = new THREE.MMDHelper();
+    var loader = new THREE.MMDLoader();
+
+    loader.load( modelFile, vmdFiles, function (object) {
+        var mesh = object;
+        /** add log object********************************************************************************/
+        // log("#".repeat(50));
+        // log('object', object);
+        /**add end**************************************************************************************************/
+        mesh.scale.set(1,1,1).multiplyScalar(1/35);
+        mesh.rotation.x = Math.PI/2;
+        mesh.material = makePhongMaterials(mesh.material.materials);
+
+        var markerObject3D = new THREE.Group();
+        markerObject3D.add( mesh );
+
+        // scene.add(mesh);
+        for (let i = 0; i < mesh.material.materials; i++) {
+            material.emissive.multiplyScalar(1);
+        }
+//        for (const material of mesh.material.materials) {
+//            material.emissive.multiplyScalar(1);
+//        }
+        helper.add(mesh);
+        helper.setAnimation(mesh);
+
+        onRenderFcts.push(function(now, delta){
+            helper.animate(delta/1000);
+        });
+
+        // /*
+        //  * Note: create CCDIKHelper after calling helper.setAnimation()
+        //  */
+        const ikHelper = new THREE.CCDIKHelper( mesh );
+        ikHelper.visible = false;
+        scene.add(ikHelper);
+    }, onProgress, onError );
+
+    /**有关下载的函数 控制台会输出n%已经下载*/
+//    var xml = new XMLHttpRequest();
+    var onProgress = function (xml) {
+        if(xml.lengthComputable) {
+          var percentage = xml.loaded / xml.total * 100;
+          log('模型已经下载了' + percentage +'%');
+        }
+    }
+
+    var onError = function (error) {
+        log('模型下载错误', error);
+    }
+
+	var markerRoot = new THREE.Group();
+	scene.add(markerRoot);
+	log('markerRoot', markerRoot);
+	var artoolkitMarker = new THREEx.ArMarkerControls(arToolkitContext, markerRoot, {
+		type : 'pattern',
+		patternUrl : THREEx.ArToolkitContext.baseURL + 'data/patt.hiro'
+//		 patternUrl : THREEx.ArToolkitContext.baseURL + '../data/data/patt.kanji'
+	})
+
+	// build a smoothedControls
+	var smoothedRoot = new THREE.Group();
+    log('smoothedRoot', smoothedRoot);
+	scene.add(smoothedRoot)
+	var smoothedControls = new THREEx.ArSmoothedControls(smoothedRoot, {
+		lerpPosition: 0.4,
+		lerpQuaternion: 0.3,
+		lerpScale: 1,
+	})
+	onRenderFcts.push(function(delta){
+		smoothedControls.update(markerRoot)
+	})
+	//////////////////////////////////////////////////////////////////////////////////
+	//		add an object in the scene
+	//////////////////////////////////////////////////////////////////////////////////
+
+	var arWorldRoot = smoothedRoot
+
+	/**在 AR 世界添加一个 cube**/
+	var geometry	= new THREE.CubeGeometry(1,1,1);
+	var material	= new THREE.MeshNormalMaterial({
+		transparent : true,
+		opacity: 0.5,
+		side: THREE.DoubleSide
+	}); 
+	var mesh	= new THREE.Mesh( geometry, material );
+	mesh.position.y	= geometry.parameters.height/4
+	arWorldRoot.add( mesh );
+
+	/**在 AR 世界添加一个环形节*/
+//	var geometry	= new THREE.TorusKnotGeometry(0.3,0.1,64,16);
+//	var material	= new THREE.MeshNormalMaterial();
+//	var mesh	= new THREE.Mesh( geometry, material );
+//	mesh.position.y	= 0.5
+//	arWorldRoot.add( mesh );
+	
+	onRenderFcts.push(function(){
+	    /**修改 mesh 的旋转***/
+		mesh.rotation.x += 0.1
+	})
+
+	//////////////////////////////////////////////////////////////////////////////////
+	//		render the whole thing on the page
+	//////////////////////////////////////////////////////////////////////////////////
+//	var stats = new Stats();
+//	document.body.appendChild( stats.dom );
+//	 render the scene
+	onRenderFcts.push(function(){
+		renderer.render( scene, camera );
+//		stats.update();
+	})
+
+	// run the rendering loop
+	var lastTimeMsec= null
+	requestAnimationFrame(function animate(nowMsec){
+		// keep looping
+		requestAnimationFrame( animate );
+		// measure time
+		lastTimeMsec	= lastTimeMsec || nowMsec-1000/60
+		var deltaMsec	= Math.min(200, nowMsec - lastTimeMsec)
+		lastTimeMsec	= nowMsec
+		// call each update function
+		onRenderFcts.forEach(function(onRenderFct){
+			onRenderFct(deltaMsec/1000, nowMsec/1000)
+		})
+	})
+//    /**分离 requestAnimationFrame 函数*/
+//    var lastTimeMsec= null;
+//    requestAnimationFrame(animate)
+//
+//    function animate(nowMsec){
+//        // keep looping 保持循环
+//        requestAnimationFrame( animate );
+//        // measure time 测量时间
+//        lastTimeMsec	= lastTimeMsec || nowMsec-1000/60;
+//        var deltaMsec	= Math.min(200, nowMsec - lastTimeMsec);
+//        lastTimeMsec	= nowMsec;
+//        // call each update function 调用每一个更新函数
+//        onRenderFcts.forEach(function(onRenderFct){
+//            onRenderFct(deltaMsec/1000, nowMsec/1000)
+//        }
+//    }
+</script>
+</body>
